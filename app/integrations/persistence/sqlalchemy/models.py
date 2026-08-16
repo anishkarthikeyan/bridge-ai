@@ -50,13 +50,13 @@ class Case(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
-    participants: Mapped[list["Participant"]] = relationship(
+    participants: Mapped[list[Participant]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )
-    conversations: Mapped[list["Conversation"]] = relationship(
+    conversations: Mapped[list[Conversation]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )
-    decisions: Mapped[list["Decision"]] = relationship(
+    decisions: Mapped[list[Decision]] = relationship(
         back_populates="case", cascade="all, delete-orphan", order_by="Decision.created_at"
     )
 
@@ -77,8 +77,8 @@ class Participant(Base):
 
     joined_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    case: Mapped["Case"] = relationship(back_populates="participants")
-    messages: Mapped[list["Message"]] = relationship(back_populates="sender")
+    case: Mapped[Case] = relationship(back_populates="participants")
+    messages: Mapped[list[Message]] = relationship(back_populates="sender")
 
 
 class Conversation(Base):
@@ -95,8 +95,8 @@ class Conversation(Base):
     opened_at: Mapped[datetime] = mapped_column(server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column()
 
-    case: Mapped["Case"] = relationship(back_populates="conversations")
-    messages: Mapped[list["Message"]] = relationship(
+    case: Mapped[Case] = relationship(back_populates="conversations")
+    messages: Mapped[list[Message]] = relationship(
         back_populates="conversation", cascade="all, delete-orphan", order_by="Message.sent_at"
     )
 
@@ -120,8 +120,8 @@ class Message(Base):
     delivered_at: Mapped[datetime | None] = mapped_column()
     read_at: Mapped[datetime | None] = mapped_column()
 
-    conversation: Mapped["Conversation"] = relationship(back_populates="messages")
-    sender: Mapped["Participant | None"] = relationship(back_populates="messages")
+    conversation: Mapped[Conversation] = relationship(back_populates="messages")
+    sender: Mapped[Participant | None] = relationship(back_populates="messages")
 
 
 class Decision(Base):
@@ -143,7 +143,7 @@ class Decision(Base):
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
 
-    case: Mapped["Case"] = relationship(back_populates="decisions")
+    case: Mapped[Case] = relationship(back_populates="decisions")
 
 
 class Policy(Base):

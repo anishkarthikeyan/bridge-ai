@@ -10,8 +10,10 @@ dist/
 .venv/
 uv.lock.bak
 
-# Env
+# Env — never commit real secrets; .env.example is the tracked template
 .env
+.env.*
+!.env.example
 
 # Testing / coverage
 .pytest_cache/
@@ -21,10 +23,21 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Node / frontend (frontend/ also has its own .gitignore for anything more specific)
+node_modules/
+frontend/dist/
+
 # Editors / OS
 .vscode/
 .idea/
 .DS_Store
+*.swp
 
 # Docker
 *.pid
+
+# Secrets / credentials — belt and braces alongside the .env rule above
+*.pem
+*.key
+*.crt
+credentials.json

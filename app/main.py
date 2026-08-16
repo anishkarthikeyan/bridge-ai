@@ -22,14 +22,18 @@ Run locally with `uv run bridge-ai`, or directly with `uvicorn app.main:app --re
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from langgraph.checkpoint.base import BaseCheckpointSaver
+from sqlalchemy.orm import Session
 
+from app.application.dto.inbound_message import InboundMessage
 from app.application.use_cases.ingest_inbound_message import IngestInboundMessageUseCase
 from app.brain.checkpointer import postgres_checkpointer
 from app.infrastructure.caspian_poller import CaspianInboundPoller
@@ -50,6 +54,75 @@ from app.integrations.real_caspian_client import RealCaspianClient
 logger = logging.getLogger(__name__)
 
 
+class _SessionPerEventInboundRouter:
+    """Runtime bug fix: `BridgeAgentHandler` needs something satisfying `InboundRouter`
+    (`.handle(message)` — see caspian_handler.py); this used to be a single
+    `IngestInboundMessageUseCase` built once at startup and bound to lifespan's one
+    process-lifetime `Session`. Nothing on that path ever called `session.commit()` — every
+    repository write in `IngestInboundMessageUseCase`/the brain nodes only `flush()`es
+    (see app/brain/nodes/base.py), which pushes SQL into the open transaction but leaves it
+    invisible to every other connection (a `psql` session, the API's own per-request
+    `get_db()` session) until something commits it, and `with SessionLocal() as session:`'s
+    `__exit__` does not commit — it just closes, discarding whatever was never committed.
+    Net effect, confirmed by direct inspection: every real Caspian-delivered inbound message
+    (Telegram or email) ran the full LangGraph pipeline — real Featherless calls, real
+    Caspian outbound sends — but the resulting Case/Decision/Participant/Conversation rows
+    were never durably persisted, so `GET /cases` (a fresh request-scoped session) never saw
+    them, and neither would a graceful shutdown or crash.
+
+    `FollowupScheduler._tick()` (scheduler.py) already gets this right — a fresh `Session`
+    per tick, `commit()` on success, `rollback()` on failure, always `close()`d. This class
+    is that exact same, already-established pattern, applied to the Caspian inbound path
+    too — not a new architectural layer: `IngestInboundMessageUseCase`, `BridgeAgentHandler`,
+    every brain node, and the `InboundRouter` protocol are all completely unchanged. Each
+    inbound event gets its own case repository and compiled graph (mirroring
+    `build_compiled_graph`'s own documented "one per unit of work" contract in
+    di_container.py) built against a fresh `Session`; the `checkpointer` — a separate,
+    already-autocommit psycopg connection (see brain/checkpointer.py) — is reused across
+    calls exactly as `build_compiled_graph` already expects a caller-owned, kept-open
+    checkpointer to be.
+
+    Exceptions are rolled back and re-raised, not swallowed here — `caspian_sdk`'s own
+    `_dispatch_event` already logs-and-continues around whatever the registered handler
+    raises for `RealCaspianClient`, and `LocalCaspianClient.simulate_inbound()` has always
+    propagated a handler's exception straight to its caller — re-raising after rollback keeps
+    both of those existing behaviors exactly as they already were; only the missing
+    commit/rollback bookkeeping is new.
+    """
+
+    def __init__(
+        self,
+        container: Container,
+        checkpointer: BaseCheckpointSaver,
+        session_factory: Callable[[], Session],
+    ) -> None:
+        self._container = container
+        self._checkpointer = checkpointer
+        self._session_factory = session_factory
+
+    def handle(self, message: InboundMessage) -> Any:
+        session = self._session_factory()
+        try:
+            case_repository = build_case_repository(session)
+            compiled_graph = build_compiled_graph(
+                self._container, case_repository, self._container.llm_client, self._checkpointer
+            )
+            result = IngestInboundMessageUseCase(case_repository, compiled_graph).handle(message)
+            session.commit()
+            return result
+        except Exception:
+            session.rollback()
+            logger.exception(
+                "Inbound message handling failed for external_message_ref=%r on channel %r — "
+                "rolled back; nothing from this pass was persisted.",
+                message.external_message_ref,
+                message.channel.value,
+            )
+            raise
+        finally:
+            session.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Part 9's remaining startup steps (checkpointer through scheduler) and their clean
@@ -61,16 +134,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     container: Container = app.state.container
 
     with postgres_checkpointer(settings.database_url) as checkpointer, SessionLocal() as session:
+        # This particular case_repository/compiled_graph pair is bound to the one
+        # process-lifetime `session` above and is deliberately NOT what handles real inbound
+        # events anymore (see _SessionPerEventInboundRouter's docstring for why routing
+        # through a single never-committed session silently dropped every real Caspian
+        # message) — it exists only to populate app.state.compiled_graph, which nothing in
+        # the running app reads except test_app_lifecycle.py's own "did startup wire
+        # everything" assertion. Never written to, so the fact that it's never committed
+        # is harmless.
         case_repository = build_case_repository(session)
         compiled_graph = build_compiled_graph(
             container, case_repository, container.llm_client, checkpointer
         )
 
-        inbound_router = IngestInboundMessageUseCase(case_repository, compiled_graph)
         # Registered exactly once, here — the one-Caspian-handler rule (architecture doc §9)
         # is enforced structurally by both CaspianClientProtocol implementations raising if
         # called twice (LocalCaspianClient and RealCaspianClient alike); this is the only
-        # call site, regardless of which one Container is holding (Phase 6.6).
+        # call site, regardless of which one Container is holding (Phase 6.6). Each real
+        # inbound event now gets its own committed unit of work — see
+        # _SessionPerEventInboundRouter above.
+        inbound_router = _SessionPerEventInboundRouter(container, checkpointer, SessionLocal)
         handler = BridgeAgentHandler(container.channel_adapter_registry, inbound_router)
         container.caspian_client.register_handler(handler)
 

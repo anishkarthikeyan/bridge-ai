@@ -1,32 +1,43 @@
-# React + TypeScript + Vite
+# Bridge AI — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite. Renders the case dashboard and live case timeline against the
+Bridge AI backend's read API — no state of its own beyond what it polls.
 
-Currently, two official plugins are available:
+See the [repository root README](../README.md) for the full project overview, architecture,
+and how to run the backend this depends on.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Commands
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm install
+pnpm dev       # dev server on :5173, proxies /api/* to the backend
+pnpm build     # type-check + production build into dist/
+pnpm preview   # serve the production build locally
+pnpm lint      # oxlint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Talking to the backend
+
+Every backend call goes through the `/api` prefix (see `vite.config.ts`), proxied to
+`http://127.0.0.1:8000` by default. Point it at a different backend with:
+
+```bash
+BRIDGE_AI_API_URL=http://127.0.0.1:8000 pnpm dev
+```
+
+The `/api` prefix isn't cosmetic — the backend's REST paths (`/cases`, `/cases/{id}`) are the
+same shape as this app's own client-side routes, so proxying them bare would intercept page
+navigation. Everything under `src/lib/api.ts` is the one place that knows this.
+
+## Structure
+
+```
+src/
+  components/
+    layout/     shell, sidebar, wordmark
+    cases/      case header, timeline, agent-event/channel-transition rendering, stakeholder
+                and health/priority/follow-up panels
+    common/     badge, loading/empty/error states
+  pages/        Cases, CaseDetail, Overview, Activity
+  lib/          API client, types mirroring the backend's DTOs, formatting/presentation helpers
+```

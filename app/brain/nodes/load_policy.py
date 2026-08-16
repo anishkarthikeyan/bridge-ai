@@ -14,7 +14,6 @@ from app.application.ports.case_repository_port import CaseRepositoryPort
 from app.brain.nodes.base import BrainNode, NodeResult
 from app.brain.state import AgentState
 from app.domain.services.policy_loader import PolicyLoader
-from app.domain.services.topic_resolver import TopicResolver
 
 DEFAULT_POLICY_PACK_PATH = "policies/software.yaml"
 

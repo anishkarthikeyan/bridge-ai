@@ -6,8 +6,20 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-bridge_ai}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bridge_ai}
       POSTGRES_DB: ${POSTGRES_DB:-bridge_ai}
+    # Host-side port only — the `app` service below never uses this; it reaches this
+    # container over the compose network as `db:5432` regardless of what's published here
+    # (see `app.environment.DATABASE_URL`), so remapping the host port has zero effect on a
+    # `docker compose up` deployment. It matters only for host tools (native `psql`, a
+    # locally-run `uv run bridge-ai`) hitting `localhost:5432` directly. Local dev on this
+    # machine already runs a native Homebrew PostgreSQL@16 bound to `localhost:5432` — two
+    # servers cannot both truly own that port, and diagnosis found the native one silently
+    # winning every real connection (more specific bind beats this container's wildcard
+    # bind), leaving this container's database permanently empty/unmigrated. Native Postgres
+    # is authoritative for local dev (it holds the real data); this is published on a
+    # different host port so `docker compose up` never contends for 5432 again. Override
+    # with POSTGRES_HOST_PORT if 5433 is also taken.
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
