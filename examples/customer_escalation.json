@@ -1,0 +1,23 @@
+{
+  "scenario": "customer_escalation",
+  "description": "A support agent forwards a customer's third unanswered billing complaint. Deliberately outside the current software.yaml policy pack (no 'customer_escalation' topic entry) — this scenario exercises the path where a case has no policy-derived required roles, so communication_health must be able to go critical on signals other than a stakeholder gap (here: repeated unanswered follow-ups from the customer).",
+  "trigger": {
+    "channel": "email",
+    "external_thread_ref": "thread-esc-7733",
+    "subject": "Re: Re: Re: Still being double-charged",
+    "from": { "name": "Jordan Blake", "email": "jordan.blake@customer.com", "role": "Customer" },
+    "cc": [
+      { "name": "Sam Okafor", "email": "sam@co.com", "role": "Support" }
+    ],
+    "body": "This is my third email about this. I was charged twice again this month and still haven't heard back. I need this resolved or I'm cancelling."
+  },
+  "expected_case": {
+    "topic": "customer_escalation",
+    "required_roles": [],
+    "present_roles": ["Support"],
+    "missing_roles": [],
+    "channels_used": ["email"],
+    "communication_health": "critical",
+    "resolution_status": "escalated"
+  }
+}

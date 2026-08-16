@@ -1,0 +1,23 @@
+{
+  "scenario": "database_migration",
+  "description": "An engineer emails about migrating the orders table to a new schema version and only cc's DevOps. DBA and QA — both required by the software policy pack for this topic — are absent from the thread.",
+  "trigger": {
+    "channel": "email",
+    "external_thread_ref": "thread-dbmig-4471",
+    "subject": "Migrating orders table to v3 schema this weekend",
+    "from": { "name": "Marcus Yeo", "email": "marcus@co.com", "role": "Engineer" },
+    "cc": [
+      { "name": "Elena Voss", "email": "elena@co.com", "role": "DevOps" }
+    ],
+    "body": "Planning to run the orders table migration Saturday during the maintenance window. Should be a quick backfill — will send the runbook link once it's finalized."
+  },
+  "expected_case": {
+    "topic": "database_migration",
+    "required_roles": ["DBA", "DevOps", "QA"],
+    "present_roles": ["DevOps"],
+    "missing_roles": ["DBA", "QA"],
+    "channels_used": ["email"],
+    "communication_health": "at_risk",
+    "resolution_status": "open"
+  }
+}

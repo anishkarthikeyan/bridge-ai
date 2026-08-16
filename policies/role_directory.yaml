@@ -1,0 +1,57 @@
+# Role directory — who can actually fill a required role, for the software industry pack.
+#
+# Read by RoleDirectoryLoader (app/domain/services/role_directory_loader.py) into an
+# immutable, role-indexed mapping of CandidateContact. RoleResolver picks the best candidate
+# for a role deterministically (lowest preference_rank, ties broken by name) — never an LLM
+# call. Separate from policies/software.yaml: that file is topic policy, this file is people.
+#
+# preference_rank: lower is more preferred. Omit for 0 (highest); ties break by name.
+
+candidates:
+  # Security — three candidates, demonstrating deterministic multi-candidate selection.
+  - role: Security
+    name: John Ortiz
+    email: john@co.com
+    telegram_handle: "@john_sec"
+    preference_rank: 1
+  - role: Security
+    name: Alice Chen
+    email: alice@co.com
+    preference_rank: 2
+  - role: Security
+    name: Mike Reyes
+    telegram_handle: "@mike_sec"
+    preference_rank: 3
+
+  - role: QA
+    name: Priya Rao
+    email: priya.rao@co.com
+    telegram_handle: "@priya_qa"
+    preference_rank: 1
+
+  - role: Product
+    name: Sofia Alvarez
+    email: sofia@co.com
+    preference_rank: 1
+
+  - role: DBA
+    name: Wei Zhang
+    email: wei@co.com
+    telegram_handle: "@wei_dba"
+    preference_rank: 1
+
+  - role: DevOps
+    name: Elena Voss
+    email: elena@co.com
+    preference_rank: 1
+
+  - role: Finance
+    name: Priya Sundaram
+    email: priya@co.com
+    preference_rank: 1
+
+  - role: Support
+    name: Sam Okafor
+    email: sam@co.com
+    telegram_handle: "@sam_support"
+    preference_rank: 1

@@ -1,0 +1,23 @@
+{
+  "scenario": "authentication_change",
+  "description": "An engineer emails about rolling out a mandatory MFA change and only cc's Product. Security and QA — both required by the software policy pack for this topic — are absent from the thread.",
+  "trigger": {
+    "channel": "email",
+    "external_thread_ref": "thread-auth-2091",
+    "subject": "Rolling out mandatory MFA for internal tools next sprint",
+    "from": { "name": "Renee Ibarra", "email": "renee@co.com", "role": "Engineer" },
+    "cc": [
+      { "name": "Priya Nair", "email": "priya@co.com", "role": "Product" }
+    ],
+    "body": "Heads up — starting next sprint we're enforcing MFA on all internal admin tools. Rolling this out to the auth service this week. Flagging here in case it affects any product timelines."
+  },
+  "expected_case": {
+    "topic": "authentication_change",
+    "required_roles": ["Security", "QA", "Product"],
+    "present_roles": ["Product"],
+    "missing_roles": ["Security", "QA"],
+    "channels_used": ["email"],
+    "communication_health": "at_risk",
+    "resolution_status": "open"
+  }
+}

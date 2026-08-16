@@ -1,0 +1,23 @@
+{
+  "scenario": "payment_system",
+  "description": "The canonical scenario from the architecture doc's Conversation Graph example: an engineer's email about a payment-flow change reaches Finance but not Security or Support, both required by the software policy pack for this topic.",
+  "trigger": {
+    "channel": "email",
+    "external_thread_ref": "thread-pay-0482",
+    "subject": "Changing the refund flow to settle same-day",
+    "from": { "name": "Dana Kapoor", "email": "dana@co.com", "role": "Engineer" },
+    "cc": [
+      { "name": "Priya Sundaram", "email": "priya@co.com", "role": "Finance" }
+    ],
+    "body": "We're changing refunds to settle same-day instead of the current 3-day hold. Wanted Finance looped in before this ships next week."
+  },
+  "expected_case": {
+    "topic": "payment_system",
+    "required_roles": ["Finance", "Security", "Support"],
+    "present_roles": ["Finance"],
+    "missing_roles": ["Security", "Support"],
+    "channels_used": ["email"],
+    "communication_health": "at_risk",
+    "resolution_status": "open"
+  }
+}

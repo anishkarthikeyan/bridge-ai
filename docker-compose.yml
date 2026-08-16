@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bridge_ai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bridge_ai}
+      POSTGRES_DB: ${POSTGRES_DB:-bridge_ai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bridge_ai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Overrides .env's DATABASE_URL so the app always reaches the compose network's
+      # "db" service, regardless of what a local .env points at.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-bridge_ai}:${POSTGRES_PASSWORD:-bridge_ai}@db:5432/${POSTGRES_DB:-bridge_ai}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:

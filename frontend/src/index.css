@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Responsive collapse point (spec §23: "At widths below ~1100px: collapse sidebar"). */
+  --breakpoint-coll: 1100px;
+
+  /* Bridge AI design system — see PHASE 7 spec. Neutral-first, one restrained accent. */
+  --color-bg: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f2f2ef;
+  --color-text-primary: #171717;
+  --color-text-secondary: #666666;
+  --color-text-muted: #8a8a8a;
+  --color-border: #e4e4e0;
+  --color-border-strong: #d2d2cc;
+  --color-accent: #1f5c4a;
+  --color-accent-hover: #17493a;
+
+  --color-success: #2f7d5b;
+  --color-warning: #b7791f;
+  --color-danger: #b94a48;
+  --color-info: #3d6b8f;
+
+  --color-channel-email: #6b7280;
+  --color-channel-telegram: #229ed9;
+  --color-channel-slack: #4a154b;
+  --color-channel-discord: #5865f2;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Subtle, restrained motion only — no particle/gradient/pulsing effects (spec §22). */
+@keyframes entry-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-entry {
+  animation: entry-fade-slide 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-entry {
+    animation: none;
+  }
+}

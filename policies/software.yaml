@@ -1,0 +1,75 @@
+# Software industry policy pack.
+#
+# The single source of truth for topic -> {required roles, priority, escalation rules,
+# communication rules} — never hardcoded in Python (architecture doc §3, LLM boundary:
+# these lookups must stay deterministic and auditable, not embedded in code). Read by
+# PolicyLoader (app/domain/services/policy_loader.py) into the immutable PolicyPack value
+# objects (app/domain/value_objects/policy_pack.py) the deterministic reasoning layer
+# actually uses.
+#
+# Distinct from the `policies` DB table (Phase 2): that table is a required_roles-only
+# audit mirror, written by a not-yet-built loader into PolicyRepositoryPort. This file is
+# the runtime read path.
+#
+# Field meanings, per topic:
+#   required_roles                        — org roles that must be present in the conversation
+#   priority                               — baseline Priority before PriorityEngine escalates it
+#   escalation_rules.escalate_after_attempts — attempt count at which escalation is forced
+#   escalation_rules.escalate_to_roles     — roles to loop in when escalating
+#   communication_rules.cooldown_hours     — minimum gap between follow-up attempts
+#   communication_rules.max_attempts       — attempts before FollowUpPolicy stops and escalates
+#   communication_rules.escalation_delay_hours — extra overdue time before a due follow-up
+#                                                 is treated as urgent enough to escalate
+#
+# Future industries add a sibling file (e.g. policies/healthcare.yaml) — nothing in code
+# branches on industry_pack name.
+
+industry_pack: software
+version: "1"
+
+topics:
+  - topic: authentication_change
+    required_roles:
+      - Security
+      - QA
+      - Product
+    priority: high
+    escalation_rules:
+      escalate_after_attempts: 2
+      escalate_to_roles:
+        - Security
+    communication_rules:
+      cooldown_hours: 12
+      max_attempts: 4
+      escalation_delay_hours: 24
+
+  - topic: database_migration
+    required_roles:
+      - DBA
+      - DevOps
+      - QA
+    priority: high
+    escalation_rules:
+      escalate_after_attempts: 2
+      escalate_to_roles:
+        - DBA
+    communication_rules:
+      cooldown_hours: 8
+      max_attempts: 5
+      escalation_delay_hours: 16
+
+  - topic: payment_system
+    required_roles:
+      - Finance
+      - Security
+      - Support
+    priority: high
+    escalation_rules:
+      escalate_after_attempts: 1
+      escalate_to_roles:
+        - Security
+        - Finance
+    communication_rules:
+      cooldown_hours: 6
+      max_attempts: 3
+      escalation_delay_hours: 12
